@@ -29,7 +29,7 @@ def face_register():
             cv2.imshow('image', frame)
             if cv2.waitKey(1) & 0xFF == ord('y'):
                 faces, landmarks = mtcnn_detector.detect(frame)
-                if faces.shape[0] is not 0:
+                if faces.shape[0] != 0:
                     faces_sum = 0
                     bbox = []
                     points = []
@@ -57,7 +57,7 @@ def face_recognition():
         ret, frame = cap.read()
         if ret:
             faces, landmarks = mtcnn_detector.detect(frame)
-            if faces.shape[0] is not 0:
+            if faces.shape[0] != 0:
                 faces_sum = 0
                 for i, face in enumerate(faces):
                     if round(faces[i, 4], 6) > 0.95:

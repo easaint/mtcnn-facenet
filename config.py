@@ -9,4 +9,4 @@ FACE_DB_PATH = './face_db/'
 TEMP_FACE_PATH = './temp/'
 # server
 HOST = 'localhost'
-POST = 5000
+POST = 8080

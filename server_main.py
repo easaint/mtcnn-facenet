@@ -26,7 +26,7 @@ faces_db = load_faces(face_sess, inputs_placeholder, embeddings)
 def recognition_face(frame):
     try:
         faces, landmarks = mtcnn_detector.detect(frame)
-        if faces.shape[0] is not 0:
+        if faces.shape[0] != 0:
             faces_sum = 0
             for i, face in enumerate(faces):
                 if round(faces[i, 4], 6) > 0.95:
@@ -83,6 +83,38 @@ def recognition_face(frame):
         return None, None, None, None, None, None
 
 
+# 注册人脸接口
+@app.route("/register", methods=['POST'])
+def register():
+    global faces_db
+    upload_file = request.files['image']
+    user_name = request.values.get("name")
+    if upload_file:
+        try:
+            image = cv2.imdecode(np.frombuffer(upload_file.read(), np.uint8), cv2.IMREAD_UNCHANGED)
+            faces, landmarks = mtcnn_detector.detect(image)
+            if faces.shape[0] != 0:
+                faces_sum = 0
+                bbox = []
+                points = []
+                for i, face in enumerate(faces):
+                    if round(faces[i, 4], 6) > 0.95:
+                        bbox = faces[i, 0:4]
+                        points = landmarks[i, :].reshape((5, 2))
+                        faces_sum += 1
+                if faces_sum == 1:
+                    nimg = face_preprocess.preprocess(image, bbox, points, image_size='112,112')
+                    cv2.imencode('.png', nimg)[1].tofile('face_db/%s.png' % user_name)
+                    # 更新人脸库
+                    faces_db = load_faces(face_sess, inputs_placeholder, embeddings)
+                    return str({"code": 0, "msg": "success"})
+            return str({"code": 3, "msg": "image not or much face"})
+        except:
+            return str({"code": 2, "msg": "this file is not image or not face"})
+    else:
+        return str({"code": 1, "msg": "file is None"})
+    
+
 # 识别人脸接口
 @app.route("/recognition", methods=['POST'])
 def recognition():
@@ -113,42 +145,10 @@ def recognition():
         return str({"error": 1, "msg": "file is None"})
 
 
-# 注册人脸接口
-@app.route("/register", methods=['POST'])
-def register():
-    global faces_db
-    upload_file = request.files['image']
-    user_name = request.values.get("name")
-    if upload_file:
-        try:
-            image = cv2.imdecode(np.frombuffer(upload_file.read(), np.uint8), cv2.IMREAD_UNCHANGED)
-            faces, landmarks = mtcnn_detector.detect(image)
-            if faces.shape[0] is not 0:
-                faces_sum = 0
-                bbox = []
-                points = []
-                for i, face in enumerate(faces):
-                    if round(faces[i, 4], 6) > 0.95:
-                        bbox = faces[i, 0:4]
-                        points = landmarks[i, :].reshape((5, 2))
-                        faces_sum += 1
-                if faces_sum == 1:
-                    nimg = face_preprocess.preprocess(image, bbox, points, image_size='112,112')
-                    cv2.imencode('.png', nimg)[1].tofile('face_db/%s.png' % user_name)
-                    # 更新人脸库
-                    faces_db = load_faces(face_sess, inputs_placeholder, embeddings)
-                    return str({"code": 0, "msg": "success"})
-            return str({"code": 3, "msg": "image not or much face"})
-        except:
-            return str({"code": 2, "msg": "this file is not image or not face"})
-    else:
-        return str({"code": 1, "msg": "file is None"})
-
-
 @app.route('/')
 def home():
     return render_template("index.html")
 
 
 if __name__ == '__main__':
-    app.run(host=config.HOST, port=config.POST)
+    app.run(host=config.HOST, port=config.POST, debug=True)
